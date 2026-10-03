@@ -1,3 +1,4 @@
+
 // package devPilot.backend.services.indexing;
 
 // import java.time.Instant;
@@ -90,18 +91,20 @@
 //         int totalChunks = 0;
 
 //         for (String path : filePaths) {
+//             List<Document> chunks = List.of();
 //             try {
 //                 String content = gitHubApiClient.getFileContent(
 //                         token, repo.getOwner(), repo.getName(), path);
-//                 List<Document> chunks = codeChunker.chunkFile(repoId.toString(), path, content);
-//                 batch.addAll(chunks);
-//                 totalChunks += chunks.size();
-//                 if (batch.size() >= VECTOR_BATCH_SIZE) {
-//                     vectorStore.add(batch);
-//                     batch.clear();
-//                 }
+//                 chunks = codeChunker.chunkFile(repoId.toString(), path, content);
 //             } catch (Exception ex) {
 //                 log.warn("Skipping file {} in {}: {}", path, repo.getFullName(), ex.getMessage());
+//             }
+
+//             batch.addAll(chunks);
+//             totalChunks += chunks.size();
+//             if (batch.size() >= VECTOR_BATCH_SIZE) {
+//                 vectorStore.add(batch);
+//                 batch.clear();
 //             }
 
 //             processed++;
@@ -228,6 +231,16 @@ public class IndexingService {
     private static final int VECTOR_BATCH_SIZE = 32;
     private static final int PROGRESS_EVERY_N_FILES = 5;
 
+    // Gemini's free tier allows 100 embedding requests per minute.
+    // Stay under it so large repositories do not fail with HTTP 429.
+    private static final int MAX_EMBEDS_PER_MINUTE = 80;
+    private static final long WINDOW_MS = 60_000;
+    private static final long RETRY_WAIT_MS = 45_000;
+    private static final int MAX_RETRIES = 4;
+
+    private long windowStartMs = System.currentTimeMillis();
+    private int embeddedInWindow = 0;
+
     private final RepositoryRepository repositoryRepository;
     private final UserService userService;
     private final GithubApiClient gitHubApiClient;
@@ -297,7 +310,7 @@ public class IndexingService {
             batch.addAll(chunks);
             totalChunks += chunks.size();
             if (batch.size() >= VECTOR_BATCH_SIZE) {
-                vectorStore.add(batch);
+                addThrottled(batch);
                 batch.clear();
             }
 
@@ -309,12 +322,63 @@ public class IndexingService {
         }
 
         if (!batch.isEmpty()) {
-            vectorStore.add(batch);
+            addThrottled(batch);
         }
 
         markReady(repoId, filePaths.size(), processed, totalChunks, repo.getFullName());
     }
 
+
+    private void addThrottled(List<Document> docs) {
+        for (int i = 0; i < docs.size(); i += MAX_EMBEDS_PER_MINUTE) {
+            List<Document> part = docs.subList(i, Math.min(i + MAX_EMBEDS_PER_MINUTE, docs.size()));
+            waitForEmbedBudget(part.size());
+            addWithRetry(part);
+        }
+    }
+
+    private synchronized void waitForEmbedBudget(int count) {
+        long now = System.currentTimeMillis();
+        if (now - windowStartMs >= WINDOW_MS) {
+            windowStartMs = now;
+            embeddedInWindow = 0;
+        }
+        if (embeddedInWindow + count > MAX_EMBEDS_PER_MINUTE) {
+            long waitMs = WINDOW_MS - (now - windowStartMs) + 1_000;
+            log.info("Embedding limit reached, pausing {}s to stay within the free-tier quota", waitMs / 1000);
+            sleep(waitMs);
+            windowStartMs = System.currentTimeMillis();
+            embeddedInWindow = 0;
+        }
+        embeddedInWindow += count;
+    }
+
+    private void addWithRetry(List<Document> docs) {
+        for (int attempt = 1; ; attempt++) {
+            try {
+                vectorStore.add(docs);
+                return;
+            } catch (RuntimeException ex) {
+                String msg = ex.getMessage() == null ? "" : ex.getMessage();
+                boolean quotaError = msg.contains("429") || msg.toLowerCase().contains("quota");
+                if (!quotaError || attempt >= MAX_RETRIES) {
+                    throw ex;
+                }
+                log.warn("Embedding quota hit (attempt {}/{}), waiting {}s before retrying",
+                        attempt, MAX_RETRIES, RETRY_WAIT_MS / 1000);
+                sleep(RETRY_WAIT_MS);
+            }
+        }
+    }
+
+    private void sleep(long ms) {
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Indexing was interrupted", e);
+        }
+    }
 
        @SuppressWarnings("unchecked")
     private List<String> listIndexableFiles(Map<String, Object> tree) {
