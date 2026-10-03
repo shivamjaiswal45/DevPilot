@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="screenshots/05-chat-answer.png" alt="DevPilot explaining its own indexing flow" width="92%">
+  <img src="screenshot/05-chat-answer.png" alt="DevPilot explaining its own indexing flow" width="92%">
 </p>
 
 <p align="center">
@@ -42,17 +42,17 @@ This pattern is called RAG. Instead of making the AI read an entire repo, you ha
 
 <table>
   <tr>
-    <td width="50%"><img src="screenshots/01-landing.png" alt="Landing page"><br><sub><b>Sign in with GitHub</b></sub></td>
-    <td width="50%"><img src="screenshots/02-dashboard.png" alt="Repository dashboard"><br><sub><b>Pick a repo</b></sub></td>
+    <td width="50%"><img src="screenshot/01-landing.png" alt="Landing page"><br><sub><b>Sign in with GitHub</b></sub></td>
+    <td width="50%"><img src="screenshot/02-dashboard.png" alt="Repository dashboard"><br><sub><b>Pick a repo</b></sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="screenshots/03-indexing.png" alt="Indexing progress"><br><sub><b>Watch it index</b></sub></td>
-    <td width="50%"><img src="screenshots/04-chat-ready.png" alt="Chat ready"><br><sub><b>Start asking</b></sub></td>
+    <td width="50%"><img src="screenshot/03-indexing.png" alt="Indexing progress"><br><sub><b>Watch it index</b></sub></td>
+    <td width="50%"><img src="screenshot/04-chat-ready.png" alt="Chat ready"><br><sub><b>Start asking</b></sub></td>
   </tr>
 </table>
 
 <p align="center">
-  <img src="screenshots/06-citations.png" alt="Answer with source file chips" width="92%"><br>
+  <img src="screenshot/06-citations.png" alt="Answer with source file chips" width="92%"><br>
   <sub>The chips under an answer are the files it used. When the chunks didn't contain what it needed, it said so instead of guessing.</sub>
 </p>
 
