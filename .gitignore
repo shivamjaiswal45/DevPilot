@@ -1,0 +1,11 @@
+.env
+.env.*
+!.env.example
+node_modules/
+target/
+.next/
+.idea/
+.vscode/
+.github/modernize/
+*.log
+*.pem
