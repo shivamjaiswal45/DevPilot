@@ -1,1 +1,3 @@
 client/components/ui/** linguist-vendored
+client/components/dashboard/** linguist-vendored
+client/components/chat/** linguist-vendored
