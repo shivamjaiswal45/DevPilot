@@ -1,7 +1,5 @@
-<h1 align="center">&gt;_ DevPilot</h1>
-
 <p align="center">
-  <b>Chat with your GitHub code. Get answers with receipts.</b>
+  <img src="assets/header.svg" alt="DevPilot: chat with your GitHub code, get answers with receipts" width="100%">
 </p>
 
 <p align="center">
@@ -21,20 +19,9 @@ After that you can ask questions in plain English. It answers from your real fil
 
 ## How it works
 
-```
- your repo
-    │   split the code into small chunks
-    ▼
- chunks ──► turned into numbers (embeddings) ──► stored in Postgres (pgvector)
-                                                          │
- your question ──► find the 8 most similar chunks ◄───────┘
-                          │
-                          ▼
-        Gemini reads only those chunks + your question
-                          │
-                          ▼
-              answer  +  the files it came from
-```
+<p align="center">
+  <img src="assets/flow.svg" alt="Repo to chunks to vectors; question to closest 8 chunks to Gemini to answer with files" width="100%">
+</p>
 
 This pattern is called RAG. Instead of making the AI read an entire repo, you hand it just the pieces that matter.
 
